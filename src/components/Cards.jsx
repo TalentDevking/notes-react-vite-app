@@ -1,86 +1,71 @@
-import React, { Component } from 'react';
-import AddCard from './AddCard';
-import Note from './Note';
-import Edit from './Edit';
+import React, { useState, useEffect } from "react";
+import AddCard from "./AddCard";
+import Note from "./Note";
+import Edit from "./Edit";
 
-export default class Cards extends Component {
-   constructor(props) {
-      super(props);
-      const notes = JSON.parse(localStorage.getItem('notes-data'));
-      this.state = {
-         notes: notes || [],
-         isEditing: false,
-         newTextValue: '',
-         noteId: '',
-      };
-   }
+const Cards = ({filter}) => {
+  const [notes, setNotes] = useState(
+    JSON.parse(localStorage.getItem("notes-data")) || []
+  );
+  const [isEditing, setIsEditing] = useState(false);
+  const [newTextValue, setNewTextValue] = useState("");
+  const [noteId, setNoteId] = useState("");
 
-   addNote = data => {
-      this.state.notes.splice(0, 0, data);
-      this.setState({
-         notes: this.state.notes,
+  const addNote = (data) => {
+    setNotes((prevNotes) => [data, ...prevNotes]);
+  };
+
+  const removeItem = (noteIndex) => {
+    setNotes((prevNotes) => prevNotes.filter((_, i) => i !== noteIndex));
+  };
+
+  const editItem = (key) => {
+    setIsEditing(true);
+    setNoteId(key);
+    setNewTextValue(notes.find((note) => note.id === key).text);
+  };
+
+  const setText = (text) => {
+    setNotes((prevNotes) => {
+      return prevNotes.map((note) => {
+        if (note.id === noteId) note.text = text;
+        return note;
       });
-   };
+    });
+  };
 
-   removeItem = noteIndex => {
-      this.state.notes.splice(noteIndex, 1);
-      this.setState({ notes: this.state.notes });
-   };
+  const saveLocal = () => {
+    localStorage.setItem("notes-data", JSON.stringify(notes));
+  };
 
-   editItem = key => {
-      this.setState({ isEditing: true, noteId: key });
-      this.state.notes.forEach(note => {
-         if (note.id == key) {
-            this.setState({ newTextValue: note.text });
-         }
-      });
-   };
+  useEffect(() => {
+    window.addEventListener("beforeunload", saveLocal);
+    return () => {
+      window.removeEventListener("beforeunload", saveLocal);
+    };
+  }, [notes]);
 
-   setText = text => {
-      this.state.notes.forEach(note => {
-         if (note.id == this.state.noteId) {
-            note.text = text;
-         }
-      });
-   };
-
-   saveLocal = () => {
-      localStorage.setItem('notes-data', JSON.stringify(this.state.notes));
-   };
-
-   handleIsEditing = isEditing => {
-      this.setState({ isEditing });
-   };
-
-   componentDidMount() {
-      window.addEventListener('beforeunload', this.saveLocal);
-   }
-
-   componentWillUnmount() {
-      window.removeEventListener('beforeunload', this.saveLocal);
-   }
-
-   render() {
-      return (
-         <ul className="container mx-auto max-w-container px-4 py-2 grid grid-cols-main gap-2">
-            {this.state.isEditing ? (
-               <Edit
-                  setText={this.setText}
-                  newTextValue={this.state.newTextValue}
-                  handleIsEditing={this.handleIsEditing}
-               />
-            ) : (
-               <>
-                  <Note
-                     editItem={this.editItem}
-                     notes={this.state.notes}
-                     removeItem={this.removeItem}
-                     filter={this.props.filter}
-                  />
-                  <AddCard addNote={this.addNote} />
-               </>
-            )}
-         </ul>
-      );
-   }
+  return (
+    <ul className="container mx-auto max-w-container px-4 py-2 grid grid-cols-main gap-2">
+      {isEditing ? (
+        <Edit
+          setText={setText}
+          newTextValue={newTextValue}
+          handleIsEditing={setIsEditing}
+        />
+      ) : (
+        <>
+          <Note
+            editItem={editItem}
+            notes={notes}
+            removeItem={removeItem}
+            filter={filter}
+          />
+          <AddCard addNote={addNote} />
+        </>
+      )}
+    </ul>
+  );
 }
+
+export default Cards
